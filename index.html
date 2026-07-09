@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Used Car Campaigns — Performance Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#F7F7F5;
+    --panel:#FFFFFF;
+    --line:#E4E3DE;
+    --line-soft:#ECEBE6;
+    --text:#22262B;
+    --muted:#6B7178;
+    --muted-2:#98A0A8;
+    --amber:#C97A2E;
+    --teal:#2C8C81;
+    --red:#C9503C;
+    --up:#2F8F5B;
+    --down:#C9503C;
+
+    /* type scale — kept consistent across the whole dashboard */
+    --fs-micro: 10px;   /* mono badges, axis ticks */
+    --fs-xs: 11px;      /* small labels, deltas, eyebrow */
+    --fs-sm: 12.5px;    /* subtitle, section labels */
+    --fs-base: 14px;    /* body / tab text */
+    --fs-md: 16px;      /* metric values, card titles */
+    --fs-lg: 19px;      /* month/latest-period values */
+    --fs-xl: 25px;      /* kpi values */
+    --fs-2xl: 30px;     /* h1 */
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    font-size:var(--fs-base);
+    line-height:1.45;
+    min-height:100vh;
+    padding:28px 20px 60px;
+  }
+  .wrap{max-width:1000px;margin:0 auto;}
+
+  header{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    flex-wrap:wrap;
+    gap:16px;
+    padding-bottom:20px;
+    margin-bottom:24px;
+    border-bottom:1px solid var(--line);
+  }
+  .brand-eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:var(--fs-xs);
+    letter-spacing:.14em;
+    color:var(--amber);
+    text-transform:uppercase;
+    margin-bottom:8px;
+    display:flex;align-items:center;gap:8px;
+  }
+  .brand-eyebrow::before{
+    content:"";
+    width:6px;height:6px;border-radius:50%;
+    background:var(--amber);
+  }
+  h1{
+    font-family:'Oswald',sans-serif;
+    font-weight:600;
+    font-size:var(--fs-2xl);
+    letter-spacing:.01em;
+    margin:0;
+    text-transform:uppercase;
+    color:var(--text);
+  }
+  header .sub{
+    color:var(--muted);
+    font-size:var(--fs-sm);
+    margin-top:6px;
+  }
+  .odo{
+    font-family:'IBM Plex Mono',monospace;
+    text-align:right;
+    color:var(--muted);
+    font-size:var(--fs-xs);
+    line-height:1.8;
+  }
+  .odo b{color:var(--text);font-weight:600;}
+
+  .tabs{
+    display:flex;
+    gap:10px;
+    margin-bottom:22px;
+    flex-wrap:wrap;
+  }
+  .tab{
+    font-family:'Oswald',sans-serif;
+    font-weight:500;
+    font-size:var(--fs-base);
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    color:var(--muted);
+    background:var(--panel);
+    border:1.5px solid var(--line);
+    border-radius:8px;
+    padding:10px 20px;
+    cursor:pointer;
+    transition:all .15s ease;
+  }
+  .tab .n{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:var(--fs-micro);
+    color:var(--muted-2);
+    display:block;
+    letter-spacing:.06em;
+    margin-top:2px;
+  }
+  .tab:hover{border-color:#C9C6BC;color:var(--text);}
+  .tab.active{
+    background:#FBF3EA;
+    border-color:var(--amber);
+    color:var(--text);
+  }
+  .tab.active .n{color:var(--amber);}
+
+  .kpi-strip{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:12px;
+    margin-bottom:26px;
+  }
+  .kpi{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:16px 18px;
+  }
+  .kpi .label{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:var(--fs-micro);
+    letter-spacing:.09em;
+    text-transform:uppercase;
+    color:var(--muted-2);
+    margin-bottom:9px;
+  }
+  .kpi .value{
+    font-family:'Oswald',sans-serif;
+    font-size:var(--fs-xl);
+    font-weight:600;
+    color:var(--text);
+    line-height:1.1;
+  }
+  .kpi .delta{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:var(--fs-xs);
+    margin-top:8px;
+    display:flex;align-items:center;gap:5px;
+  }
+  .delta.up{color:var(--up);}
+  .delta.down{color:var(--down);}
+  .delta.flat{color:var(--muted);}
+  .kpi .delta .wk{color:var(--muted-2);margin-left:2px;}
+
+  .section-label{
+    font-family:'Oswald',sans-serif;
+    text-transform:uppercase;
+    letter-spacing:.07em;
+    font-size:var(--fs-sm);
+    color:var(--muted);
+    margin:4px 0 14px 2px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .section-label::after{
+    content:"";flex:1;height:1px;background:var(--line);
+  }
+  .legend-note{
+    display:flex;align-items:center;gap:18px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:var(--fs-xs);color:var(--muted-2);
+    margin:-6px 0 16px 2px;
+    flex-wrap:wrap;
+  }
+  .legend-note span{display:flex;align-items:center;gap:6px;}
+  .legend-note i{width:10px;height:10px;border-radius:2px;display:inline-block;}
+
+  .grid{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:14px;
+    margin-bottom:30px;
+  }
+
+  .card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:18px 20px 10px;
+    position:relative;
+    overflow:hidden;
+    box-shadow:0 1px 2px rgba(20,20,15,0.03);
+  }
+  .card::before{
+    content:"";
+    position:absolute;top:0;left:0;right:0;height:3px;
+    background:var(--type-color,var(--amber));
+    opacity:.9;
+  }
+  .card.card-total{
+    background:linear-gradient(180deg,#F4F6FB 0%,#FFFFFF 60%);
+    border-color:#D6DCEC;
+  }
+  .card.card-total::before{
+    height:4px;
+    opacity:1;
+  }
+  .card-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    margin-bottom:2px;
+  }
+  .card-title{
+    display:flex;
+    align-items:center;
+    gap:9px;
+  }
+  .dot{width:9px;height:9px;border-radius:2px;background:var(--type-color,var(--amber));}
+  .card-title h3{
+    font-family:'Oswald',sans-serif;
+    text-transform:uppercase;
+    font-size:var(--fs-lg);
+    font-weight:500;
+    letter-spacing:.02em;
+    margin:0;
+    color:var(--text);
+  }
+  .card-total .card-title h3{
+    font-size:calc(var(--fs-lg) + 2px);
+    letter-spacing:.03em;
+  }
+  .card-badge{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:var(--fs-micro);
+    color:var(--muted-2);
+    letter-spacing:.05em;
+    text-align:right;
+  }
+  .metrics-row{
+    display:flex;
+    gap:28px;
+    margin:12px 0 6px;
+    flex-wrap:wrap;
+  }
+  .metric{
+    font-family:'IBM Plex Mono',monospace;
+  }
+  .metric .k{font-size:var(--fs-micro);color:var(--muted-2);text-transform:uppercase;letter-spacing:.07em;}
+  .metric .v{font-size:var(--fs-md);color:var(--text);font-weight:600;margin-top:3px;}
+  .metric .v.amber{color:var(--amber);}
+  .metric .v.teal{color:var(--teal);}
+  .metric .v.red{color:var(--red);}
+  .metric .d{font-size:var(--fs-xs);margin-top:3px;}
+
+  .chart-box{height:220px;margin-top:10px;}
+  .cpl-box{height:64px;margin-top:2px;}
+  .cpl-label{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:var(--fs-micro);color:var(--muted-2);
+    letter-spacing:.07em;text-transform:uppercase;
+    margin-top:14px;
+  }
+
+  .note-only{
+    display:flex;align-items:center;justify-content:center;
+    height:150px;color:var(--muted-2);
+    font-family:'IBM Plex Mono',monospace;font-size:var(--fs-xs);text-align:center;padding:0 20px;
+  }
+
+  footer{
+    text-align:center;
+    color:var(--muted-2);
+    font-family:'IBM Plex Mono',monospace;
+    font-size:var(--fs-micro);
+    letter-spacing:.04em;
+    margin-top:34px;
+    padding-top:16px;
+    border-top:1px solid var(--line-soft);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <div class="brand-eyebrow">Live · Weekly + day-wise rollup</div>
+      <h1>Used Car Campaigns</h1>
+      <div class="sub">Daily-average Spend, Leads &amp; CPL by campaign type — Google Ads &amp; Meta</div>
+    </div>
+    <div class="odo">
+      RANGE&nbsp; <b>06 Apr – 08 Jul 2026</b><br>
+      SOURCES&nbsp; <b>Google Ads · Meta</b>
+    </div>
+  </header>
+
+  <div class="tabs" id="cityTabs"></div>
+  <div class="kpi-strip" id="kpiStrip"></div>
+  <div class="section-label">Total &amp; by campaign type</div>
+  <div class="legend-note">
+    <span><i style="background:#C97A2E;"></i>Weekly avg/day (06 Apr – 28 Jun)</span>
+    <span><i style="background:#7A6FC4;"></i>Actual daily values (29 Jun – 08 Jul)</span>
+  </div>
+  <div class="grid" id="cardGrid"></div>
+
+  <footer>NOTE — WEEKS (06 APR–28 JUN) SHOWN AS DAILY AVERAGE OF THAT WEEK'S SPEND/LEADS · 29 JUN – 08 JUL SHOWN AS ACTUAL DAILY VALUES ACROSS EVERY CHART · CPL = SPEND ÷ LEADS (UNCHANGED BY AVERAGING)</footer>
+</div>
+
+<script>
+const DATA = {"Ahmedabad":{"Catalogue":[{"label":"20 Apr","granularity":"week","spend":476.09,"leads":14.14,"cpl":33.67,"days":7},{"label":"27 Apr","granularity":"week","spend":480.81,"leads":29.29,"cpl":16.42,"days":7},{"label":"04 May","granularity":"week","spend":495.5,"leads":31.43,"cpl":15.77,"days":7},{"label":"11 May","granularity":"week","spend":518.56,"leads":34.71,"cpl":14.94,"days":7},{"label":"18 May","granularity":"week","spend":480.44,"leads":36.71,"cpl":13.09,"days":7},{"label":"25 May","granularity":"week","spend":506.82,"leads":27.71,"cpl":18.29,"days":7},{"label":"01 Jun","granularity":"week","spend":503.05,"leads":22.86,"cpl":22.01,"days":7},{"label":"08 Jun","granularity":"week","spend":497.55,"leads":20.57,"cpl":24.19,"days":7},{"label":"15 Jun","granularity":"week","spend":501.0,"leads":16.57,"cpl":30.24,"days":7},{"label":"22 Jun","granularity":"week","spend":899.92,"leads":33.71,"cpl":26.7,"days":7},{"label":"29 Jun","granularity":"day","spend":1197.15,"leads":31.0,"cpl":38.62,"days":1},{"label":"30 Jun","granularity":"day","spend":1228.11,"leads":40.0,"cpl":30.7,"days":1},{"label":"01 Jul","granularity":"day","spend":1626.17,"leads":53.0,"cpl":30.68,"days":1},{"label":"02 Jul","granularity":"day","spend":1999.82,"leads":62.0,"cpl":32.26,"days":1},{"label":"03 Jul","granularity":"day","spend":1883.71,"leads":42.0,"cpl":44.85,"days":1},{"label":"04 Jul","granularity":"day","spend":1918.24,"leads":54.0,"cpl":35.52,"days":1},{"label":"05 Jul","granularity":"day","spend":2092.1,"leads":48.0,"cpl":43.59,"days":1},{"label":"06 Jul","granularity":"day","spend":2196.63,"leads":56.0,"cpl":39.23,"days":1},{"label":"07 Jul","granularity":"day","spend":1871.4,"leads":41.0,"cpl":45.64,"days":1},{"label":"08 Jul","granularity":"day","spend":1909.19,"leads":33.0,"cpl":57.85,"days":1}],"LeadForm":[{"label":"01 Jul","granularity":"day","spend":992.78,"leads":5.0,"cpl":198.56,"days":1},{"label":"02 Jul","granularity":"day","spend":893.58,"leads":5.0,"cpl":178.72,"days":1},{"label":"03 Jul","granularity":"day","spend":64.39,"leads":0.0,"cpl":null,"days":1}],"Search":[{"label":"06 Apr","granularity":"week","spend":538.67,"leads":13.49,"cpl":39.93,"days":5},{"label":"13 Apr","granularity":"week","spend":1037.36,"leads":53.87,"cpl":19.26,"days":7},{"label":"20 Apr","granularity":"week","spend":1105.63,"leads":54.14,"cpl":20.42,"days":7},{"label":"27 Apr","granularity":"week","spend":858.51,"leads":43.73,"cpl":19.63,"days":7},{"label":"04 May","granularity":"week","spend":1004.28,"leads":49.08,"cpl":20.46,"days":7},{"label":"11 May","granularity":"week","spend":1009.71,"leads":48.94,"cpl":20.63,"days":7},{"label":"18 May","granularity":"week","spend":984.6,"leads":48.7,"cpl":20.22,"days":7},{"label":"25 May","granularity":"week","spend":914.35,"leads":44.88,"cpl":20.37,"days":7},{"label":"01 Jun","granularity":"week","spend":1078.31,"leads":44.98,"cpl":23.97,"days":7},{"label":"08 Jun","granularity":"week","spend":1037.66,"leads":30.91,"cpl":33.57,"days":7},{"label":"15 Jun","granularity":"week","spend":1028.04,"leads":25.87,"cpl":39.74,"days":7},{"label":"22 Jun","granularity":"week","spend":1283.85,"leads":45.41,"cpl":28.27,"days":7},{"label":"29 Jun","granularity":"day","spend":1516.05,"leads":41.88,"cpl":36.2,"days":1},{"label":"30 Jun","granularity":"day","spend":1514.9,"leads":37.77,"cpl":40.11,"days":1},{"label":"01 Jul","granularity":"day","spend":1983.57,"leads":51.93,"cpl":38.2,"days":1},{"label":"02 Jul","granularity":"day","spend":1887.52,"leads":47.75,"cpl":39.53,"days":1},{"label":"03 Jul","granularity":"day","spend":1196.19,"leads":31.49,"cpl":37.99,"days":1},{"label":"04 Jul","granularity":"day","spend":1516.04,"leads":33.69,"cpl":45.0,"days":1},{"label":"05 Jul","granularity":"day","spend":1636.02,"leads":41.83,"cpl":39.11,"days":1},{"label":"06 Jul","granularity":"day","spend":1514.79,"leads":47.04,"cpl":32.2,"days":1},{"label":"07 Jul","granularity":"day","spend":1409.34,"leads":25.09,"cpl":56.17,"days":1},{"label":"08 Jul","granularity":"day","spend":1581.08,"leads":35.4,"cpl":44.66,"days":1}]},"Chandigarh":{"Catalogue":[{"label":"20 Apr","granularity":"week","spend":424.14,"leads":3.0,"cpl":141.38,"days":5},{"label":"27 Apr","granularity":"week","spend":519.87,"leads":9.0,"cpl":57.76,"days":7},{"label":"04 May","granularity":"week","spend":486.08,"leads":8.0,"cpl":60.76,"days":7},{"label":"11 May","granularity":"week","spend":515.67,"leads":8.57,"cpl":60.17,"days":7},{"label":"18 May","granularity":"week","spend":488.47,"leads":12.57,"cpl":38.86,"days":7},{"label":"25 May","granularity":"week","spend":500.46,"leads":14.86,"cpl":33.68,"days":7},{"label":"01 Jun","granularity":"week","spend":500.47,"leads":12.86,"cpl":38.92,"days":7},{"label":"08 Jun","granularity":"week","spend":494.24,"leads":7.57,"cpl":65.29,"days":7},{"label":"15 Jun","granularity":"week","spend":506.65,"leads":8.43,"cpl":60.1,"days":7},{"label":"22 Jun","granularity":"week","spend":737.42,"leads":9.14,"cpl":80.68,"days":7},{"label":"29 Jun","granularity":"day","spend":1499.23,"leads":4.0,"cpl":374.81,"days":1},{"label":"30 Jun","granularity":"day","spend":959.0,"leads":1.0,"cpl":959.0,"days":1},{"label":"01 Jul","granularity":"day","spend":2474.2,"leads":13.0,"cpl":190.32,"days":1},{"label":"02 Jul","granularity":"day","spend":2199.21,"leads":16.0,"cpl":137.45,"days":1},{"label":"03 Jul","granularity":"day","spend":2847.42,"leads":15.0,"cpl":189.83,"days":1},{"label":"04 Jul","granularity":"day","spend":952.23,"leads":14.0,"cpl":68.02,"days":1},{"label":"05 Jul","granularity":"day","spend":203.7,"leads":5.0,"cpl":40.74,"days":1},{"label":"06 Jul","granularity":"day","spend":832.99,"leads":11.0,"cpl":75.73,"days":1},{"label":"07 Jul","granularity":"day","spend":908.36,"leads":9.0,"cpl":100.93,"days":1},{"label":"08 Jul","granularity":"day","spend":1023.64,"leads":15.0,"cpl":68.24,"days":1}],"LeadForm":[{"label":"01 Jul","granularity":"day","spend":1286.07,"leads":54.0,"cpl":23.82,"days":1},{"label":"02 Jul","granularity":"day","spend":1472.01,"leads":55.0,"cpl":26.76,"days":1},{"label":"03 Jul","granularity":"day","spend":1271.74,"leads":46.0,"cpl":27.65,"days":1},{"label":"04 Jul","granularity":"day","spend":1871.7,"leads":39.0,"cpl":47.99,"days":1},{"label":"05 Jul","granularity":"day","spend":2034.9,"leads":49.0,"cpl":41.53,"days":1},{"label":"06 Jul","granularity":"day","spend":1931.96,"leads":46.0,"cpl":42.0,"days":1},{"label":"07 Jul","granularity":"day","spend":1907.19,"leads":50.0,"cpl":38.14,"days":1},{"label":"08 Jul","granularity":"day","spend":1970.39,"leads":32.0,"cpl":61.57,"days":1}],"Search":[{"label":"06 Apr","granularity":"week","spend":1112.6,"leads":14.62,"cpl":76.1,"days":7},{"label":"13 Apr","granularity":"week","spend":957.46,"leads":37.0,"cpl":25.88,"days":7},{"label":"20 Apr","granularity":"week","spend":1053.12,"leads":45.98,"cpl":22.9,"days":7},{"label":"27 Apr","granularity":"week","spend":859.02,"leads":40.64,"cpl":21.14,"days":7},{"label":"04 May","granularity":"week","spend":1017.44,"leads":45.07,"cpl":22.57,"days":7},{"label":"11 May","granularity":"week","spend":1008.47,"leads":42.47,"cpl":23.75,"days":7},{"label":"18 May","granularity":"week","spend":977.08,"leads":46.63,"cpl":20.95,"days":7},{"label":"25 May","granularity":"week","spend":911.73,"leads":49.34,"cpl":18.48,"days":7},{"label":"01 Jun","granularity":"week","spend":1067.04,"leads":41.57,"cpl":25.67,"days":7},{"label":"08 Jun","granularity":"week","spend":1035.56,"leads":34.58,"cpl":29.95,"days":7},{"label":"15 Jun","granularity":"week","spend":1023.46,"leads":26.87,"cpl":38.09,"days":7},{"label":"22 Jun","granularity":"week","spend":1144.63,"leads":26.5,"cpl":43.19,"days":7},{"label":"29 Jun","granularity":"day","spend":1195.87,"leads":35.86,"cpl":33.35,"days":1},{"label":"30 Jun","granularity":"day","spend":1144.21,"leads":37.11,"cpl":30.83,"days":1},{"label":"01 Jul","granularity":"day","spend":1938.16,"leads":36.19,"cpl":53.56,"days":1},{"label":"02 Jul","granularity":"day","spend":1948.29,"leads":25.81,"cpl":75.49,"days":1},{"label":"03 Jul","granularity":"day","spend":1202.39,"leads":17.23,"cpl":69.78,"days":1},{"label":"04 Jul","granularity":"day","spend":1280.07,"leads":16.85,"cpl":75.97,"days":1},{"label":"05 Jul","granularity":"day","spend":1259.97,"leads":38.18,"cpl":33.0,"days":1},{"label":"06 Jul","granularity":"day","spend":1042.7,"leads":21.62,"cpl":48.23,"days":1},{"label":"07 Jul","granularity":"day","spend":1088.14,"leads":30.39,"cpl":35.81,"days":1},{"label":"08 Jul","granularity":"day","spend":1571.4,"leads":18.0,"cpl":87.3,"days":1}]},"Nashik":{"Catalogue":[{"label":"20 Apr","granularity":"week","spend":447.6,"leads":2.8,"cpl":159.86,"days":5},{"label":"27 Apr","granularity":"week","spend":500.63,"leads":8.43,"cpl":59.39,"days":7},{"label":"04 May","granularity":"week","spend":496.57,"leads":8.71,"cpl":57.01,"days":7},{"label":"11 May","granularity":"week","spend":513.87,"leads":5.57,"cpl":92.26,"days":7},{"label":"18 May","granularity":"week","spend":680.31,"leads":11.43,"cpl":59.52,"days":7},{"label":"25 May","granularity":"week","spend":1170.18,"leads":16.14,"cpl":72.5,"days":7},{"label":"01 Jun","granularity":"week","spend":1316.08,"leads":14.14,"cpl":93.07,"days":7},{"label":"08 Jun","granularity":"week","spend":3087.18,"leads":20.43,"cpl":151.11,"days":7},{"label":"15 Jun","granularity":"week","spend":3216.74,"leads":18.71,"cpl":171.93,"days":7},{"label":"22 Jun","granularity":"week","spend":2511.82,"leads":12.71,"cpl":197.63,"days":7},{"label":"29 Jun","granularity":"day","spend":1173.45,"leads":7.0,"cpl":167.64,"days":1},{"label":"30 Jun","granularity":"day","spend":1080.54,"leads":7.0,"cpl":154.36,"days":1},{"label":"01 Jul","granularity":"day","spend":1579.87,"leads":8.0,"cpl":197.48,"days":1},{"label":"02 Jul","granularity":"day","spend":2134.4,"leads":16.0,"cpl":133.4,"days":1},{"label":"03 Jul","granularity":"day","spend":2007.26,"leads":16.0,"cpl":125.45,"days":1},{"label":"04 Jul","granularity":"day","spend":1913.24,"leads":26.0,"cpl":73.59,"days":1},{"label":"05 Jul","granularity":"day","spend":2640.46,"leads":34.0,"cpl":77.66,"days":1},{"label":"06 Jul","granularity":"day","spend":2910.37,"leads":24.0,"cpl":121.27,"days":1},{"label":"07 Jul","granularity":"day","spend":2015.01,"leads":23.0,"cpl":87.61,"days":1},{"label":"08 Jul","granularity":"day","spend":2664.03,"leads":34.0,"cpl":78.35,"days":1}],"LeadForm":[{"label":"01 Jul","granularity":"day","spend":1839.85,"leads":29.0,"cpl":63.44,"days":1},{"label":"02 Jul","granularity":"day","spend":2196.96,"leads":49.0,"cpl":44.84,"days":1},{"label":"03 Jul","granularity":"day","spend":1985.03,"leads":33.0,"cpl":60.15,"days":1},{"label":"04 Jul","granularity":"day","spend":1644.06,"leads":28.0,"cpl":58.72,"days":1},{"label":"05 Jul","granularity":"day","spend":2272.38,"leads":36.0,"cpl":63.12,"days":1},{"label":"06 Jul","granularity":"day","spend":2012.96,"leads":25.0,"cpl":80.52,"days":1},{"label":"07 Jul","granularity":"day","spend":1926.01,"leads":29.0,"cpl":66.41,"days":1},{"label":"08 Jul","granularity":"day","spend":2009.9,"leads":28.0,"cpl":71.78,"days":1}],"Meta - Website":[{"label":"06 Jul","granularity":"day","spend":626.26,"leads":0.0,"cpl":null,"days":1},{"label":"07 Jul","granularity":"day","spend":1175.21,"leads":7.0,"cpl":167.89,"days":1},{"label":"08 Jul","granularity":"day","spend":1055.05,"leads":4.0,"cpl":263.76,"days":1}],"Meta-Whatsapp":[{"label":"07 Jul","granularity":"day","spend":168.85,"leads":3.0,"cpl":56.28,"days":1},{"label":"08 Jul","granularity":"day","spend":778.72,"leads":50.0,"cpl":15.57,"days":1}],"Search":[{"label":"06 Apr","granularity":"week","spend":446.63,"leads":8.25,"cpl":54.14,"days":5},{"label":"13 Apr","granularity":"week","spend":1030.01,"leads":20.96,"cpl":49.14,"days":7},{"label":"20 Apr","granularity":"week","spend":1097.7,"leads":29.62,"cpl":37.06,"days":7},{"label":"27 Apr","granularity":"week","spend":907.31,"leads":32.4,"cpl":28.0,"days":7},{"label":"04 May","granularity":"week","spend":997.79,"leads":34.4,"cpl":29.01,"days":7},{"label":"11 May","granularity":"week","spend":1002.73,"leads":36.86,"cpl":27.2,"days":7},{"label":"18 May","granularity":"week","spend":966.52,"leads":30.38,"cpl":31.81,"days":7},{"label":"25 May","granularity":"week","spend":1556.9,"leads":36.39,"cpl":42.78,"days":7},{"label":"01 Jun","granularity":"week","spend":1722.52,"leads":30.04,"cpl":57.34,"days":6},{"label":"08 Jun","granularity":"week","spend":1993.58,"leads":33.63,"cpl":59.28,"days":7},{"label":"15 Jun","granularity":"week","spend":1384.34,"leads":33.34,"cpl":41.52,"days":7},{"label":"22 Jun","granularity":"week","spend":1011.75,"leads":16.66,"cpl":60.73,"days":7},{"label":"29 Jun","granularity":"day","spend":984.48,"leads":17.93,"cpl":54.91,"days":1},{"label":"30 Jun","granularity":"day","spend":948.7,"leads":12.0,"cpl":79.06,"days":1},{"label":"01 Jul","granularity":"day","spend":1427.13,"leads":25.4,"cpl":56.19,"days":1},{"label":"02 Jul","granularity":"day","spend":1941.37,"leads":20.58,"cpl":94.33,"days":1},{"label":"03 Jul","granularity":"day","spend":1128.29,"leads":21.97,"cpl":51.36,"days":1},{"label":"04 Jul","granularity":"day","spend":1240.37,"leads":44.24,"cpl":28.04,"days":1},{"label":"05 Jul","granularity":"day","spend":1217.32,"leads":21.59,"cpl":56.38,"days":1},{"label":"06 Jul","granularity":"day","spend":1104.84,"leads":21.38,"cpl":51.68,"days":1},{"label":"07 Jul","granularity":"day","spend":1121.66,"leads":30.56,"cpl":36.7,"days":1},{"label":"08 Jul","granularity":"day","spend":1108.15,"leads":16.53,"cpl":67.04,"days":1}]}};
+;
+
+const MONTHLY = {"Ahmedabad":[{"month":"April","spend":25975.79,"leads":1245.7,"cpl":20.85},{"month":"May","spend":45826.21,"leads":2443.15,"cpl":18.76},{"month":"June","spend":53261.83,"leads":1836.84,"cpl":29.0},{"month":"July","spend":30172.56,"leads":713.22,"cpl":42.3}],"Chandigarh":[{"month":"April","spend":29072.57,"leads":891.17,"cpl":32.62},{"month":"May","spend":45900.34,"leads":1747.07,"cpl":26.27},{"month":"June","spend":50364.65,"leads":1250.7,"cpl":40.27},{"month":"July","spend":36518.83,"leads":673.27,"cpl":54.24}],"Nashik":[{"month":"April","spend":24574.05,"leads":575.12,"cpl":42.73},{"month":"May","spend":56340.64,"leads":1379.22,"cpl":40.85},{"month":"June","spend":116172.66,"leads":1271.59,"cpl":91.36},{"month":"July","spend":47845.01,"leads":704.25,"cpl":67.94}]};
+const TOTAL = {"Ahmedabad":[{"label":"06 Apr","granularity":"week","spend":538.67,"leads":13.49,"cpl":39.93},{"label":"13 Apr","granularity":"week","spend":1037.36,"leads":53.87,"cpl":19.26},{"label":"20 Apr","granularity":"week","spend":1581.72,"leads":68.28,"cpl":23.17},{"label":"27 Apr","granularity":"week","spend":1339.32,"leads":73.02,"cpl":18.34},{"label":"04 May","granularity":"week","spend":1499.78,"leads":80.51,"cpl":18.63},{"label":"11 May","granularity":"week","spend":1528.27,"leads":83.66,"cpl":18.27},{"label":"18 May","granularity":"week","spend":1465.05,"leads":85.41,"cpl":17.15},{"label":"25 May","granularity":"week","spend":1421.17,"leads":72.59,"cpl":19.58},{"label":"01 Jun","granularity":"week","spend":1581.36,"leads":67.83,"cpl":23.31},{"label":"08 Jun","granularity":"week","spend":1535.21,"leads":51.48,"cpl":29.82},{"label":"15 Jun","granularity":"week","spend":1529.04,"leads":42.44,"cpl":36.03},{"label":"22 Jun","granularity":"week","spend":2183.77,"leads":79.12,"cpl":27.6},{"label":"29 Jun","granularity":"day","spend":2713.2,"leads":72.88,"cpl":37.23},{"label":"30 Jun","granularity":"day","spend":2743.01,"leads":77.77,"cpl":35.27},{"label":"01 Jul","granularity":"day","spend":4602.52,"leads":109.93,"cpl":41.87},{"label":"02 Jul","granularity":"day","spend":4780.92,"leads":114.75,"cpl":41.66},{"label":"03 Jul","granularity":"day","spend":3144.29,"leads":73.49,"cpl":42.79},{"label":"04 Jul","granularity":"day","spend":3434.28,"leads":87.69,"cpl":39.16},{"label":"05 Jul","granularity":"day","spend":3728.12,"leads":89.83,"cpl":41.5},{"label":"06 Jul","granularity":"day","spend":3711.42,"leads":103.04,"cpl":36.02},{"label":"07 Jul","granularity":"day","spend":3280.74,"leads":66.09,"cpl":49.64},{"label":"08 Jul","granularity":"day","spend":3490.27,"leads":68.4,"cpl":51.03}],"Chandigarh":[{"label":"06 Apr","granularity":"week","spend":1112.6,"leads":14.62,"cpl":76.1},{"label":"13 Apr","granularity":"week","spend":957.46,"leads":37.0,"cpl":25.88},{"label":"20 Apr","granularity":"week","spend":1356.08,"leads":48.12,"cpl":28.18},{"label":"27 Apr","granularity":"week","spend":1378.89,"leads":49.64,"cpl":27.78},{"label":"04 May","granularity":"week","spend":1503.52,"leads":53.07,"cpl":28.33},{"label":"11 May","granularity":"week","spend":1524.14,"leads":51.04,"cpl":29.86},{"label":"18 May","granularity":"week","spend":1465.55,"leads":59.2,"cpl":24.76},{"label":"25 May","granularity":"week","spend":1412.19,"leads":64.2,"cpl":22.0},{"label":"01 Jun","granularity":"week","spend":1567.51,"leads":54.43,"cpl":28.8},{"label":"08 Jun","granularity":"week","spend":1529.8,"leads":42.16,"cpl":36.29},{"label":"15 Jun","granularity":"week","spend":1530.1,"leads":35.3,"cpl":43.35},{"label":"22 Jun","granularity":"week","spend":1882.06,"leads":35.65,"cpl":52.79},{"label":"29 Jun","granularity":"day","spend":2695.1,"leads":39.86,"cpl":67.61},{"label":"30 Jun","granularity":"day","spend":2103.21,"leads":38.11,"cpl":55.19},{"label":"01 Jul","granularity":"day","spend":5698.43,"leads":103.19,"cpl":55.22},{"label":"02 Jul","granularity":"day","spend":5619.51,"leads":96.81,"cpl":58.05},{"label":"03 Jul","granularity":"day","spend":5321.55,"leads":78.23,"cpl":68.02},{"label":"04 Jul","granularity":"day","spend":4104.0,"leads":69.85,"cpl":58.75},{"label":"05 Jul","granularity":"day","spend":3498.57,"leads":92.18,"cpl":37.95},{"label":"06 Jul","granularity":"day","spend":3807.65,"leads":78.62,"cpl":48.43},{"label":"07 Jul","granularity":"day","spend":3903.69,"leads":89.39,"cpl":43.67},{"label":"08 Jul","granularity":"day","spend":4565.43,"leads":65.0,"cpl":70.24}],"Nashik":[{"label":"06 Apr","granularity":"week","spend":446.63,"leads":8.25,"cpl":54.14},{"label":"13 Apr","granularity":"week","spend":1030.01,"leads":20.96,"cpl":49.14},{"label":"20 Apr","granularity":"week","spend":1417.41,"leads":31.62,"cpl":44.83},{"label":"27 Apr","granularity":"week","spend":1407.94,"leads":40.83,"cpl":34.48},{"label":"04 May","granularity":"week","spend":1494.36,"leads":43.11,"cpl":34.66},{"label":"11 May","granularity":"week","spend":1516.59,"leads":42.43,"cpl":35.74},{"label":"18 May","granularity":"week","spend":1646.83,"leads":41.81,"cpl":39.39},{"label":"25 May","granularity":"week","spend":2727.07,"leads":52.53,"cpl":51.91},{"label":"01 Jun","granularity":"week","spend":2792.52,"leads":39.89,"cpl":70.01},{"label":"08 Jun","granularity":"week","spend":5080.76,"leads":54.05,"cpl":94.0},{"label":"15 Jun","granularity":"week","spend":4601.08,"leads":52.06,"cpl":88.38},{"label":"22 Jun","granularity":"week","spend":3523.56,"leads":29.38,"cpl":119.93},{"label":"29 Jun","granularity":"day","spend":2157.93,"leads":24.93,"cpl":86.56},{"label":"30 Jun","granularity":"day","spend":2029.24,"leads":19.0,"cpl":106.8},{"label":"01 Jul","granularity":"day","spend":4846.85,"leads":62.4,"cpl":77.67},{"label":"02 Jul","granularity":"day","spend":6272.73,"leads":85.58,"cpl":73.3},{"label":"03 Jul","granularity":"day","spend":5120.58,"leads":70.97,"cpl":72.15},{"label":"04 Jul","granularity":"day","spend":4797.67,"leads":98.24,"cpl":48.84},{"label":"05 Jul","granularity":"day","spend":6130.16,"leads":91.59,"cpl":66.93},{"label":"06 Jul","granularity":"day","spend":6654.43,"leads":70.38,"cpl":94.55},{"label":"07 Jul","granularity":"day","spend":6406.74,"leads":92.56,"cpl":69.22},{"label":"08 Jul","granularity":"day","spend":7615.85,"leads":132.53,"cpl":57.47}]};
+
+const TYPE_COLOR = {
+  "Search":"#C97A2E",
+  "Catalogue":"#3E9A61",
+  "LeadForm":"#C9503C",
+  "Meta - Website":"#4A7FB5",
+  "Meta-Whatsapp":"#B54A8C"
+};
+const TYPE_ORDER = ["Search","Catalogue","LeadForm","Meta - Website","Meta-Whatsapp"];
+const TOTAL_COLOR = "#3E5C9A";
+const WEEK_COLOR = "#C97A2E";
+const DAY_COLOR = "#7A6FC4";
+
+let activeCity = Object.keys(DATA)[0];
+let charts = [];
+
+function fmtINR(n, decimals=0){
+  if(n===null||n===undefined||isNaN(n)) return "—";
+  return "₹" + n.toLocaleString('en-IN', {maximumFractionDigits:decimals, minimumFractionDigits:decimals});
+}
+function fmtNum(n, decimals=0){
+  if(n===null||n===undefined||isNaN(n)) return "—";
+  return n.toLocaleString('en-IN', {maximumFractionDigits:decimals, minimumFractionDigits:decimals});
+}
+function pctDelta(cur, prev){
+  if(prev===null||prev===undefined||prev===0||cur===null||cur===undefined) return null;
+  return ((cur-prev)/prev)*100;
+}
+function deltaHTML(cur, prev, invert=false, label='vs prior period'){
+  const d = pctDelta(cur, prev);
+  if(d===null) return `<span class="delta flat">— <span class="wk">no prior data</span></span>`;
+  const good = invert ? d<0 : d>0;
+  const cls = Math.abs(d) < 0.5 ? 'flat' : (good ? 'up' : 'down');
+  const arrow = d>0 ? '▲' : (d<0 ? '▼' : '—');
+  return `<span class="delta ${cls}">${arrow} ${Math.abs(d).toFixed(1)}% <span class="wk">${label}</span></span>`;
+}
+
+function buildTabs(){
+  const el = document.getElementById('cityTabs');
+  el.innerHTML = '';
+  Object.keys(DATA).forEach(city=>{
+    const typesCount = Object.keys(DATA[city]).length;
+    const btn = document.createElement('button');
+    btn.className = 'tab' + (city===activeCity ? ' active':'');
+    btn.innerHTML = `${city}<span class="n">${typesCount} CAMPAIGN TYPE${typesCount!==1?'S':''}</span>`;
+    btn.onclick = ()=>{ activeCity = city; render(); };
+    el.appendChild(btn);
+  });
+}
+
+function buildKPIs(){
+  const el = document.getElementById('kpiStrip');
+  const months = MONTHLY[activeCity];
+
+  const june = months.find(m=>m.month==='June');
+  const may = months.find(m=>m.month==='May');
+
+  el.innerHTML = `
+    <div class="kpi">
+      <div class="label">June Spend · ${activeCity}</div>
+      <div class="value">${fmtINR(june.spend)}</div>
+      ${deltaHTML(june.spend, may?may.spend:null, false, 'vs May')}
+    </div>
+    <div class="kpi">
+      <div class="label">June Leads · ${activeCity}</div>
+      <div class="value">${fmtNum(june.leads)}</div>
+      ${deltaHTML(june.leads, may?may.leads:null, false, 'vs May')}
+    </div>
+    <div class="kpi">
+      <div class="label">June Blended CPL</div>
+      <div class="value">${fmtINR(june.cpl,2)}</div>
+      ${deltaHTML(june.cpl, may?may.cpl:null, true, 'vs May')}
+    </div>
+    <div class="kpi">
+      <div class="label">Month</div>
+      <div class="value" style="font-size:18px;">June 2026</div>
+      <div class="delta flat">full month · vs May 2026</div>
+    </div>
+  `;
+}
+
+function destroyCharts(){
+  charts.forEach(c=>c.destroy());
+  charts = [];
+}
+
+function renderCard(grid, series, color, title, badgeText, isTotal){
+  const last = series[series.length-1];
+  const prev = series.length>1 ? series[series.length-2] : null;
+  const cmpLabel = last.granularity === 'day' ? 'vs prior day' : 'vs prior wk';
+
+  const card = document.createElement('div');
+  card.className = 'card' + (isTotal ? ' card-total' : '');
+  card.style.setProperty('--type-color', color);
+
+  const noData = series.length < 2;
+
+  card.innerHTML = `
+    <div class="card-head">
+      <div class="card-title">
+        <span class="dot"></span>
+        <h3>${title}</h3>
+      </div>
+      <div class="card-badge">${badgeText}</div>
+    </div>
+    <div class="metrics-row">
+      <div class="metric">
+        <div class="k">Spend (latest)</div>
+        <div class="v amber">${fmtINR(last.spend)}</div>
+        <div class="d">${deltaHTML(last.spend, prev?prev.spend:null, false, cmpLabel)}</div>
+      </div>
+      <div class="metric">
+        <div class="k">Leads (latest)</div>
+        <div class="v teal">${fmtNum(last.leads)}</div>
+        <div class="d">${deltaHTML(last.leads, prev?prev.leads:null, false, cmpLabel)}</div>
+      </div>
+      <div class="metric">
+        <div class="k">CPL (latest)</div>
+        <div class="v red">${fmtINR(last.cpl,2)}</div>
+        <div class="d">${deltaHTML(last.cpl, prev?prev.cpl:null, true, cmpLabel)}</div>
+      </div>
+    </div>
+    ${noData ? `<div class="note-only">Not enough data logged yet.</div>` : `
+    <div class="chart-box"><canvas></canvas></div>
+    <div class="cpl-label">CPL trend (₹ per lead)</div>
+    <div class="cpl-box"><canvas></canvas></div>
+    `}
+  `;
+  grid.appendChild(card);
+
+  if(noData) return;
+
+  const canvases = card.querySelectorAll('canvas');
+  const mainCtx = canvases[0].getContext('2d');
+  const cplCtx = canvases[1].getContext('2d');
+
+  const labels = series.map(p=>p.label);
+  const spendColors = series.map(p=> p.granularity==='day' ? DAY_COLOR+'70' : color+'55');
+  const spendBorders = series.map(p=> p.granularity==='day' ? DAY_COLOR : color);
+
+  const mainChart = new Chart(mainCtx, {
+    data:{
+      labels,
+      datasets:[
+        {
+          type:'bar',
+          label:'Spend',
+          data: series.map(p=>p.spend),
+          backgroundColor: spendColors,
+          borderColor: spendBorders,
+          borderWidth:1,
+          borderRadius:3,
+          yAxisID:'y',
+          order:2,
+          maxBarThickness:26
+        },
+        {
+          type:'line',
+          label:'Leads',
+          data: series.map(p=>p.leads),
+          borderColor:'#2C8C81',
+          backgroundColor:'#2C8C81',
+          pointRadius: series.map(p=> p.granularity==='day' ? 4 : 2.5),
+          pointHoverRadius:5,
+          borderWidth:2,
+          tension:.3,
+          yAxisID:'y1',
+          order:1
+        }
+      ]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      interaction:{mode:'index', intersect:false},
+      plugins:{
+        legend:{
+          display:true,
+          position:'top',
+          align:'end',
+          labels:{color:'#6B7178', boxWidth:10, boxHeight:10, font:{size:10, family:'IBM Plex Mono'}, padding:10}
+        },
+        tooltip:{
+          backgroundColor:'#22262B',
+          titleColor:'#F7F7F5',
+          bodyColor:'#F7F7F5',
+          borderColor:'#22262B',
+          borderWidth:0,
+          padding:10,
+          titleFont:{family:'IBM Plex Mono', size:11},
+          bodyFont:{family:'IBM Plex Mono', size:11},
+          callbacks:{
+            label: function(ctx){
+              const pt = series[ctx.dataIndex];
+              const suffix = pt.granularity==='week' ? '/day avg' : '';
+              if(ctx.dataset.label==='Spend') return ' Spend: ' + fmtINR(ctx.parsed.y) + suffix;
+              return ' Leads: ' + fmtNum(ctx.parsed.y,1) + suffix;
+            },
+            afterBody: function(items){
+              const pt = series[items[0].dataIndex];
+              return pt.granularity === 'day' ? ['(actual daily value)'] : ['(daily average across that week)'];
+            }
+          }
+        }
+      },
+      scales:{
+        x:{
+          grid:{color:'#ECEBE6', drawTicks:false},
+          ticks:{color:'#98A0A8', font:{size:9.5, family:'IBM Plex Mono'}, maxRotation:0}
+        },
+        y:{
+          position:'left',
+          grid:{color:'#ECEBE6'},
+          ticks:{color:'#98A0A8', font:{size:9, family:'IBM Plex Mono'}, callback:v=>'₹'+(v>=1000? (v/1000).toFixed(1)+'k': v)},
+          title:{display:false}
+        },
+        y1:{
+          position:'right',
+          grid:{display:false},
+          ticks:{color:'#98A0A8', font:{size:9, family:'IBM Plex Mono'}},
+          title:{display:false}
+        }
+      }
+    }
+  });
+  charts.push(mainChart);
+
+  const cplChart = new Chart(cplCtx, {
+    type:'line',
+    data:{
+      labels,
+      datasets:[{
+        data: series.map(p=>p.cpl),
+        borderColor:'#C9503C',
+        backgroundColor:'rgba(201,80,60,0.08)',
+        borderWidth:2,
+        pointRadius: series.map(p=> p.granularity==='day' ? 3.5 : 2),
+        pointHoverRadius:6,
+        pointBackgroundColor:'#C9503C',
+        pointHitRadius:14,
+        tension:.3,
+        fill:true,
+        spanGaps:true
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      interaction:{mode:'index', intersect:false},
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          backgroundColor:'#22262B',
+          titleColor:'#F7F7F5',
+          bodyColor:'#F7F7F5',
+          borderColor:'#22262B',
+          borderWidth:0,
+          padding:8,
+          titleFont:{family:'IBM Plex Mono', size:10, weight:'600'},
+          bodyFont:{family:'IBM Plex Mono', size:11},
+          displayColors:false,
+          callbacks:{
+            title: ctx => ctx[0].label,
+            label: ctx => (ctx.parsed.y===null ? ' CPL: — (no leads)' : ' CPL: ' + fmtINR(ctx.parsed.y,2))
+          }
+        }
+      },
+      scales:{
+        x:{display:false},
+        y:{
+          display:true,
+          position:'right',
+          grid:{color:'#ECEBE6'},
+          ticks:{color:'#98A0A8', font:{size:8.5, family:'IBM Plex Mono'}, maxTicksLimit:3, callback:v=>'₹'+v}
+        }
+      }
+    }
+  });
+  charts.push(cplChart);
+}
+
+function buildCards(){
+  const grid = document.getElementById('cardGrid');
+  grid.innerHTML = '';
+  destroyCharts();
+
+  const types = DATA[activeCity];
+  const orderedTypes = TYPE_ORDER.filter(t=>types[t]);
+
+  // Total card first — sum across all campaign types for this city
+  const totalSeries = TOTAL[activeCity];
+  if(totalSeries && totalSeries.length){
+    renderCard(grid, totalSeries, TOTAL_COLOR, 'All Campaigns · Total', 'SUM OF ALL TYPES', true);
+  }
+
+  orderedTypes.forEach((type)=>{
+    const series = types[type];
+    const color = TYPE_COLOR[type] || '#C97A2E';
+    const weekCount = series.filter(p=>p.granularity==='week').length;
+    const dayCount = series.filter(p=>p.granularity==='day').length;
+    const badge = `${weekCount} WK${weekCount!==1?'S':''} + ${dayCount} DAY${dayCount!==1?'S':''}`;
+    renderCard(grid, series, color, type, badge, false);
+  });
+}
+
+function render(){
+  buildTabs();
+  buildKPIs();
+  buildCards();
+}
+
+render();
+</script>
+</body>
+</html>

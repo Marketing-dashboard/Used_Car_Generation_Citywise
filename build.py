@@ -18,7 +18,21 @@ WHAT IT DOES:
 - Writes the final, self-contained index.html
 """
 
-import openpyxl
+import sys
+
+try:
+    import openpyxl
+except ImportError:
+    print("=" * 60)
+    print("ERROR: the 'openpyxl' package is not installed.")
+    print()
+    print("Open a terminal / command prompt in this folder and run:")
+    print("    pip install openpyxl")
+    print("(or 'pip3 install openpyxl' / 'python -m pip install openpyxl')")
+    print("=" * 60)
+    input("\nPress Enter to close...")
+    sys.exit(1)
+
 import json
 import datetime
 from collections import defaultdict

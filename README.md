@@ -10,21 +10,28 @@ Spend / Leads / CPL by city and campaign type.
 | `Used_cars_data.xlsx` | Source data. **Replace this file** whenever you have a new export. |
 | `template.html` | The dashboard's HTML/CSS/JS shell, with placeholders where data gets injected. Don't edit unless you're changing the design. |
 | `build.py` | Reads the xlsx + template, generates `index.html`. **Run this after updating the data.** |
+| `run_build.bat` | **Windows users: double-click this instead of build.py.** More reliable — it won't flash-close before you can read an error. |
 | `index.html` | The generated, ready-to-view dashboard. This is what GitHub Pages serves. Don't hand-edit — it gets overwritten every time you run `build.py`. |
 
 ## Updating the dashboard with new data
 
 1. Replace `Used_cars_data.xlsx` in this folder with your latest export (same filename).
-2. Double-click `build.py` (or run `python3 build.py` in a terminal from this folder).
+2. **Windows**: double-click `run_build.bat`. **Mac**: open Terminal, `cd` into this folder, run `python3 build.py`.
 3. It regenerates `index.html`. Open it locally in a browser to sanity-check.
 4. Commit and push (see below) — GitHub Pages will pick up the change automatically.
 
-### If double-clicking `build.py` doesn't work
-Depends on your OS's file associations for `.py` files. If nothing happens:
-- **Windows**: right-click → "Open with" → Python, or open a terminal in the folder and run `python build.py`
-- **Mac**: open Terminal, `cd` into this folder, run `python3 build.py`
+### Troubleshooting: nothing seems to happen / window flashes and closes
+This means Python hit an error before it could show you the message — usually one of:
 
-Either way you'll need `openpyxl` installed once: `pip install openpyxl`
+- **`openpyxl` isn't installed.** Open a terminal/command prompt in this folder and run:
+  `pip install openpyxl` (or `pip3 install openpyxl` / `python -m pip install openpyxl`)
+- **Double-clicking `build.py` directly opens it in a text editor instead of running it.**
+  Use `run_build.bat` instead (Windows) — it explicitly calls Python and stays open no matter what happens, so you'll always see the error if one occurs.
+- **Python isn't installed at all**, or isn't on your system PATH. Install it from
+  [python.org](https://python.org) and make sure to check "Add Python to PATH" during setup.
+
+If `index.html`'s file "last modified" timestamp hasn't changed after you run the build, the
+build didn't actually complete — check for one of the above.
 
 ## Hosting on GitHub Pages with GitHub Desktop
 

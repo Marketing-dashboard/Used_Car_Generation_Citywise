@@ -46,7 +46,7 @@ XLSX_PATH = FOLDER / "Used_cars_data.xlsx"
 TEMPLATE_PATH = FOLDER / "template.html"
 OUTPUT_PATH = FOLDER / "index.html"
 
-EXCLUDE_TYPES = {"Demand Gen", "P.Max"}   # campaign types to drop entirely
+EXCLUDE_TYPES = {"P.Max", "Meta-Whatsapp"}   # campaign types to drop entirely
 DAILY_CUTOFF_DAYS = 7                     # last N days shown day-wise instead of weekly-avg
 
 

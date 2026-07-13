@@ -334,9 +334,9 @@ const TYPE_COLOR = {
   "Catalogue":"#3E9A61",
   "LeadForm":"#C9503C",
   "Meta - Website":"#4A7FB5",
-  "Meta-Whatsapp":"#B54A8C"
+  "Demand Gen":"#8A8F3D"
 };
-const TYPE_ORDER = ["Search","Catalogue","LeadForm","Meta - Website","Meta-Whatsapp"];
+const TYPE_ORDER = ["Search","Catalogue","LeadForm","Meta - Website","Demand Gen"];
 const TOTAL_COLOR = "#3E5C9A";
 const WEEK_COLOR = "#C97A2E";
 const DAY_COLOR = "#7A6FC4";
@@ -540,12 +540,14 @@ function renderCard(grid, series, color, title, badgeText, isTotal){
         },
         y:{
           position:'left',
+          beginAtZero:true,
           grid:{color:'#ECEBE6'},
           ticks:{color:'#98A0A8', font:{size:9, family:'IBM Plex Mono'}, callback:v=>'₹'+(v>=1000? (v/1000).toFixed(1)+'k': v)},
           title:{display:false}
         },
         y1:{
           position:'right',
+          beginAtZero:true,
           grid:{display:false},
           ticks:{color:'#98A0A8', font:{size:9, family:'IBM Plex Mono'}},
           title:{display:false}
